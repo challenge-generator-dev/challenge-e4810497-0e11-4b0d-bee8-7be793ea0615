@@ -1,0 +1,164 @@
+<div class="orders-container">
+  <header class="orders-header">
+    <h1 class="orders-title">Gestión de Órdenes</h1>
+    <div class="orders-actions">
+      <button 
+        class="btn-refresh" 
+        (click)="onRefresh()"
+        [disabled]="isLoading()"
+        aria-label="Actualizar lista de órdenes">
+        <span class="btn-icon" aria-hidden="true">↻</span>
+        Actualizar
+      </button>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="error-banner" role="alert">
+      <p class="error-text">{{ errorMessage() }}</p>
+      <button class="btn-close" (click)="clearError()" aria-label="Cerrar mensaje de error">
+        ×
+      </button>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="loading-text">Cargando órdenes...</p>
+    </div>
+  } @else if (!hasOrders()) {
+    <div class="empty-state" role="status">
+      <div class="empty-icon" aria-hidden="true">📋</div>
+      <p class="empty-text">No hay órdenes disponibles</p>
+      <button class="btn-primary" (click)="onRefresh()">
+        Cargar órdenes
+      </button>
+    </div>
+  } @else {
+    <div class="orders-summary">
+      <div class="summary-card">
+        <span class="summary-label">Total de órdenes</span>
+        <span class="summary-value">{{ orderCount() }}</span>
+      </div>
+      <div class="summary-card summary-pending">
+        <span class="summary-label">Pendientes</span>
+        <span class="summary-value">{{ pendingOrders().length }}</span>
+      </div>
+      <div class="summary-card summary-completed">
+        <span class="summary-label">Completadas</span>
+        <span class="summary-value">{{ completedOrders().length }}</span>
+      </div>
+    </div>
+
+    <section class="orders-list" aria-label="Lista de órdenes">
+      <table class="orders-table" role="table">
+        <thead>
+          <tr>
+            <th scope="col">ID de Orden</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Items</th>
+            <th scope="col">Total</th>
+            <th scope="col">Fecha de Creación</th>
+            <th scope="col">Última Actualización</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of orders(); track trackByOrderId($index, order)) {
+            <tr 
+              class="order-row" 
+              [class.selected]="selectedOrder()?.id === order.id"
+              (click)="selectOrder(order)"
+              tabindex="0"
+              role="row"
+              [attr.aria-selected]="selectedOrder()?.id === order.id">
+              <td class="order-id">
+                <code>{{ order.id }}</code>
+              </td>
+              <td class="order-status">
+                <app-order-status [status]="order.status"></app-order-status>
+              </td>
+              <td class="order-items">
+                <span class="items-count">{{ getTotalItems(order) }}</span>
+                <span class="items-detail">({{ order.items.length }} productos)</span>
+              </td>
+              <td class="order-total">
+                <span class="total-amount">{{ getTotalPrice(order) | currency:'USD':'symbol':'1.2-2' }}</span>
+              </td>
+              <td class="order-date">
+                <time [attr.datetime]="order.createdAt.toISOString()">
+                  {{ formatDate(order.createdAt) }}
+                </time>
+              </td>
+              <td class="order-updated">
+                <time [attr.datetime]="order.updatedAt.toISOString()">
+                  {{ formatDate(order.updatedAt) }}
+                </time>
+              </td>
+              <td class="order-actions">
+                <div class="action-buttons">
+                  <button 
+                    class="btn-action btn-view"
+                    (click)="selectOrder(order); $event.stopPropagation()"
+                    aria-label="Ver detalles de la orden {{ order.id }}">
+                    Ver
+                  </button>
+                  <button 
+                    class="btn-action btn-update"
+                    (click)="updateStatus(order.id, 'PROCESSING'); $event.stopPropagation()"
+                    aria-label="Actualizar estado de la orden {{ order.id }}">
+                    Actualizar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+
+  @if (selectedOrder()) {
+    <aside class="order-detail-panel" role="complementary" aria-label="Detalles de la orden seleccionada">
+      <h2 class="detail-title">Detalles de la Orden</h2>
+      <div class="detail-content">
+        <dl class="detail-list">
+          <dt class="detail-label">ID</dt>
+          <dd class="detail-value"><code>{{ selectedOrder()!.id }}</code></dd>
+          
+          <dt class="detail-label">Estado</dt>
+          <dd class="detail-value">
+            <app-order-status [status]="selectedOrder()!.status"></app-order-status>
+          </dd>
+          
+          <dt class="detail-label">Fecha de Creación</dt>
+          <dd class="detail-value">
+            <time>{{ formatDate(selectedOrder()!.createdAt) }}</time>
+          </dd>
+          
+          <dt class="detail-label">Última Actualización</dt>
+          <dd class="detail-value">
+            <time>{{ formatDate(selectedOrder()!.updatedAt) }}</time>
+          </dd>
+        </dl>
+        
+        <h3 class="items-title">Productos</h3>
+        <ul class="items-list" role="list">
+          @for (item of selectedOrder()!.items; track item.productId) {
+            <li class="item-row">
+              <span class="item-product-id">{{ item.productId }}</span>
+              <span class="item-quantity">× {{ item.quantity }}</span>
+              <span class="item-price">{{ item.price | currency:'USD':'symbol':'1.2-2' }}</span>
+            </li>
+          }
+        </ul>
+        
+        <div class="detail-total">
+          <span class="total-label">Total:</span>
+          <span class="total-value">{{ getTotalPrice(selectedOrder()!) | currency:'USD':'symbol':'1.2-2' }}</span>
+        </div>
+      </div>
+    </aside>
+  }
+</div>
